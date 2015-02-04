@@ -13,7 +13,7 @@ class Base(object):
                 '\n' if extra_newline else '',
                 "\t" * indent_level,
                 project_name,
-                False),
+                trailing_newline=False),
             position)
         self._write_to_project()
         return project
@@ -41,16 +41,11 @@ class Base(object):
         with open(self.filename, 'r') as f:
             return f.read()
 
-    def _insert_in_project(self, content, position=0, trailing_newline=True):
+    def _insert_in_project(self, content, position=0, end=False, trailing_newline=True):
+        end = end if end else position
         self.raw_content = \
             self.raw_content[:position] + \
             content + ("\n" if trailing_newline else '') + \
-            self.raw_content[position:]
-
-    def _replace_in_project(self, content, start, end):
-        self.raw_content = \
-            self.raw_content[:start] + \
-            content + \
             self.raw_content[end:]
 
     def _write_to_project(self):
@@ -127,7 +122,7 @@ class Project(object):
     def add_task(self, task, tags=[], notes=""):
         new_task = Task(task, self, tags=tags, notes=notes)
         self._tp._insert_in_project(
-            task.toString(),
+            new_task.toString(),
             self._get_position()
         )
         self._tp._write_to_project()
@@ -187,10 +182,11 @@ class Task(object):
         )
         start_index = self.project._tp._get_text_position(original_task)
         end_index = start_index + len(original_task)
-        self.project._tp._replace_in_project(
+        self.project._tp._insert_in_project(
             self.task,
             start_index,
-            end_index
+            end_index,
+            trailing_newline=False
         )
         self.project._tp._write_to_project()
 
