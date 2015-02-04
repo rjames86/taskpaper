@@ -47,3 +47,4 @@ This is still very early stages, but offers the ability to
 - read due dates for tasks if they exist
 - add tags to tasks when creating tasks
 - set due dates for tasks
+- returning subprojects fails if you get the subprojects at the very bottom of a list

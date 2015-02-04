@@ -18,6 +18,29 @@ class Base(object):
         self._write_to_project()
         return project
 
+    def _get_projects(self, content=None):
+        to_ret = Projects()
+        if not content:
+            content = self.raw_content
+        re_project = re.compile(
+            r'(?P<indent>^|\s{2,}|\t+)(?P<project>[\w ]+):(?:\s+|$)', re.UNICODE)
+        for index, line in enumerate(content.splitlines()):
+            project_search = re_project.search(line)
+            if project_search:
+                indent_level = len(project_search.group("indent"))
+                to_ret.append(
+                    Project(self,
+                            project_search.group("project"),
+                            indent_level))
+        return to_ret
+
+    def _get_raw_content(self, is_string):
+        if is_string:
+            self.is_string = True
+            return self.filename
+        with open(self.filename, 'r') as f:
+            return f.read()
+
     def _insert_in_project(self, content, position=0, trailing_newline=True):
         self.raw_content = \
             self.raw_content[:position] + \
@@ -42,7 +65,7 @@ class Base(object):
 
 class Project(object):
     def __init__(self, tp, name, indent_level=0):
-        self.tp = tp
+        self._tp = tp
         self.name = name
         self.tags = []
         self._tasks = Tasks(self)
@@ -50,7 +73,7 @@ class Project(object):
 
     @property
     def raw_content(self):
-        return self.tp.raw_content[self.project_index: self.next_project_index]
+        return self._tp.raw_content[self._project_index: self._next_project_index]
 
     @property
     def tasks(self):
@@ -59,60 +82,60 @@ class Project(object):
         return self._tasks
 
     @property
-    def project_index(self):
-        return self.tp._get_text_position("{}:".format(self.name))
+    def subprojects(self):
+        return self._get_subprojects()
 
     @property
-    def next_newline(self):
+    def _project_index(self):
+        return self._tp._get_text_position("{}:".format(self.name))
+
+    @property
+    def _next_newline(self):
         """get the position of the next newline after the project"""
-        return self.project_index + \
-            self.tp._get_text_position("\n", self.project_index)
+        return self._project_index + \
+            self._tp._get_text_position("\n", self._project_index)
 
     @property
-    def next_project_index(self):
+    def _next_project_index(self):
         """
         Looks for the next position in the raw content for a
         project at the same indent level
         """
-        indexes = self.tp.projects.get_all_indexes(self.indent_level)
+        indexes = self._tp.projects.get_all_indexes(self.indent_level)
         try:
-            return indexes[indexes.index(self.project_index) + 1]
+            return indexes[indexes.index(self._project_index) + 1]
         except IndexError:
-            return len(self.tp.raw_content)
-
-    @property
-    def subprojects(self):
-        return self._get_subprojects()
+            return len(self._tp.raw_content)
 
     def __repr__(self):
         return "<Project %s>" % self.name
 
     def add_subproject(self, project_name):
         """creates a subproject at the very bottom of the project"""
-        return self.tp.create_project(
+        return self._tp.create_project(
             project_name,
             self.indent_level + 1,
-            self.next_project_index - 1,
+            self._next_project_index - 1,
             extra_newline=False
         )
 
     def _get_subprojects(self):
         content = \
-            self.tp.raw_content[self.next_newline: self.next_project_index]
-        return self.tp._get_projects(content)
+            self._tp.raw_content[self._next_newline: self._next_project_index]
+        return self._tp._get_projects(content)
 
     def add_task(self, task, tags=[], notes=""):
         new_task = Task(task, self, tags=tags, notes=notes)
-        self.tp._insert_in_project(
-            "{}- {}".format("\t" * (self.indent_level + 1), new_task.task),
+        self._tp._insert_in_project(
+            task.toString(),
             self._get_position()
         )
-        self.tp._write_to_project()
+        self._tp._write_to_project()
         self._tasks.append(new_task)
         return new_task
 
     def _get_position(self):
-        return self.next_newline + 1
+        return self._next_newline + 1
 
 
 class Projects(list):
@@ -122,7 +145,7 @@ class Projects(list):
                 return project
 
     def get_all_indexes(self, indent_level):
-        return sorted(set([p.project_index
+        return sorted(set([p._project_index
                       for p in self
                       if p.indent_level == indent_level]))
 
@@ -136,6 +159,16 @@ class Task(object):
         self.task = task
         self.tags = self._set_tags(tags) if tags else []
         self.notes = notes if notes else ""
+
+    def __str__(self):
+        return "{tabs}- {task}{tags}".format(
+            tabs="\t" * (self.project.indent_level + 1),
+            task=self.task,
+            tags=self._get_tag_string()
+            )
+
+    def toString(self):
+        return self.__str__()
 
     def complete(self):
         from datetime import datetime
@@ -152,14 +185,14 @@ class Task(object):
             now_tag,
             project_tag
         )
-        start_index = self.project.tp._get_text_position(original_task)
+        start_index = self.project._tp._get_text_position(original_task)
         end_index = start_index + len(original_task)
-        self.project.tp._replace_in_project(
+        self.project._tp._replace_in_project(
             self.task,
             start_index,
             end_index
         )
-        self.project.tp._write_to_project()
+        self.project._tp._write_to_project()
 
     def __repr__(self):
         return "<Task Item>"
@@ -167,12 +200,19 @@ class Task(object):
     def _set_tags(self, tags):
         if isinstance(tags, str):
             tags = [tags]
+        tags = map(self._add_arroba, tags)
         return tags
+
+    def _add_arroba(self, tag):
+        return '@' + tag if not tag.startswith('@') else tag
+
+    def _get_tag_string(self):
+        return " " + " ".join(self.tags)
 
 
 class Tasks(list):
     def __init__(self, project):
-        self.raw_content = project.tp.raw_content
+        self.raw_content = project._tp.raw_content
         self.project = project
 
     def get_tasks(self):
@@ -188,7 +228,7 @@ class Tasks(list):
         re_search = re.compile(r'\n\t{%s}-(?:\s|\t)(.*)(?:(?=@)|(?=\n))' %
                                (self.project.indent_level + 1), re.UNICODE)
         start = self.project._get_position() - 1
-        end = self.project.next_project_index
+        end = self.project._next_project_index
         return re_search.findall(
             self.raw_content[start:end])
 
@@ -212,26 +252,3 @@ class TaskPaper(Base):
     @property
     def projects(self):
         return self._get_projects()
-
-    def _get_projects(self, content=None):
-        to_ret = Projects()
-        if not content:
-            content = self.raw_content
-        re_project = re.compile(
-            r'(?P<indent>^|\s{2,}|\t+)(?P<project>[\w ]+):(?:\s+|$)', re.UNICODE)
-        for index, line in enumerate(content.splitlines()):
-            project_search = re_project.search(line)
-            if project_search:
-                indent_level = len(project_search.group("indent"))
-                to_ret.append(
-                    Project(self,
-                            project_search.group("project"),
-                            indent_level))
-        return to_ret
-
-    def _get_raw_content(self, is_string):
-        if is_string:
-            self.is_string = True
-            return self.filename
-        with open(self.filename, 'r') as f:
-            return f.read()
