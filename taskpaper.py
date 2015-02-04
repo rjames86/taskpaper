@@ -213,6 +213,22 @@ class TaskPaper(Base):
     def projects(self):
         return self._get_projects()
 
+    def _get_projects(self, content=None):
+        to_ret = Projects()
+        if not content:
+            content = self.raw_content
+        re_project = re.compile(
+            r'(?P<indent>^|\s{2,}|\t+)(?P<project>[\w ]+):(?:\s+|$)', re.UNICODE)
+        for index, line in enumerate(content.splitlines()):
+            project_search = re_project.search(line)
+            if project_search:
+                indent_level = len(project_search.group("indent"))
+                to_ret.append(
+                    Project(self,
+                            project_search.group("project"),
+                            indent_level))
+        return to_ret
+
     def _get_raw_content(self, is_string):
         if is_string:
             self.is_string = True
