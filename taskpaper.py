@@ -41,7 +41,11 @@ class Base(object):
         with open(self.filename, 'r') as f:
             return f.read()
 
-    def _insert_in_project(self, content, position=0, end=False, trailing_newline=True):
+    def _insert_in_project(self,
+                           content,
+                           position=0,
+                           end=False,
+                           trailing_newline=True):
         end = end if end else position
         self.raw_content = \
             self.raw_content[:position] + \
@@ -66,9 +70,13 @@ class Project(object):
         self._tasks = Tasks(self)
         self.indent_level = indent_level
 
+    def __repr__(self):
+        return "<Project %s>" % self.name
+
     @property
     def raw_content(self):
-        return self._tp.raw_content[self._project_index: self._next_project_index]
+        return self._tp.raw_content[
+            self._project_index: self._next_project_index]
 
     @property
     def tasks(self):
@@ -102,8 +110,15 @@ class Project(object):
         except IndexError:
             return len(self._tp.raw_content)
 
-    def __repr__(self):
-        return "<Project %s>" % self.name
+    def add_task(self, task, tags=[], notes=""):
+        new_task = Task(task, self, tags=tags, notes=notes)
+        self._tp._insert_in_project(
+            new_task.toString(),
+            self._get_position()
+        )
+        self._tp._write_to_project()
+        self._tasks.append(new_task)
+        return new_task
 
     def add_subproject(self, project_name):
         """creates a subproject at the very bottom of the project"""
@@ -118,16 +133,6 @@ class Project(object):
         content = \
             self._tp.raw_content[self._next_newline: self._next_project_index]
         return self._tp._get_projects(content)
-
-    def add_task(self, task, tags=[], notes=""):
-        new_task = Task(task, self, tags=tags, notes=notes)
-        self._tp._insert_in_project(
-            new_task.toString(),
-            self._get_position()
-        )
-        self._tp._write_to_project()
-        self._tasks.append(new_task)
-        return new_task
 
     def _get_position(self):
         return self._next_newline + 1
