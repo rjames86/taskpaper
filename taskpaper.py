@@ -104,7 +104,7 @@ class Project(object):
         Looks for the next position in the raw content for a
         project at the same indent level
         """
-        indexes = self._tp.projects.get_all_indexes(self.indent_level)
+        indexes = self._tp.projects._get_all_indexes(self.indent_level)
         try:
             return indexes[indexes.index(self._project_index) + 1]
         except IndexError:
@@ -130,9 +130,21 @@ class Project(object):
         )
 
     def _get_subprojects(self):
+        """get subprojects for a given project. It first checks the list of
+        (indent, indexes) to see if the next project is 0, which means the
+        current project is at the very end"""
+        next_project_index = self._check_for_endproject()
         content = \
-            self._tp.raw_content[self._next_newline: self._next_project_index]
+            self._tp.raw_content[self._next_newline: next_project_index]
         return self._tp._get_projects(content)
+
+    def _check_for_endproject(self):
+        check_index = self._tp.projects._get_indent_indexes(self._project_index)
+        for indent, index in check_index[1:]:
+            if indent == 0:
+                return index
+        return self._next_project_index
+
 
     def _get_position(self):
         return self._next_newline + 1
@@ -144,10 +156,21 @@ class Projects(list):
             if project.name == name:
                 return project
 
-    def get_all_indexes(self, indent_level):
-        return sorted(set([p._project_index
-                      for p in self
-                      if p.indent_level == indent_level]))
+    def _get_all_indexes(self, indent_level=-1):
+        return sorted(set([p._project_index for p in self
+                      if p.indent_level == indent_level])) \
+            if indent_level >= 0 \
+            else [p._project_index for p in self]
+
+    def _get_all_indents(self):
+        return [p.indent_level for p in self]
+
+    def _get_indent_indexes(self, start=0):
+        """returns tuple of (index level, position) starting at
+        a given position in the raw_content"""
+        all_indexes = self._get_all_indexes()
+        index = all_indexes.index(start)
+        return zip(self._get_all_indents()[index:], all_indexes[index:])
 
 
 class Task(object):
