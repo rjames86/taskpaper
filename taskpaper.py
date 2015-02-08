@@ -100,15 +100,7 @@ class Project(object):
 
     @property
     def _next_project_index(self):
-        """
-        Looks for the next position in the raw content for a
-        project at the same indent level
-        """
-        indexes = self._tp.projects._get_all_indexes(self.indent_level)
-        try:
-            return indexes[indexes.index(self._project_index) + 1]
-        except IndexError:
-            return len(self._tp.raw_content)
+        return self._check_for_endproject()
 
     def add_task(self, task, tags=[], notes=""):
         new_task = Task(task, self, tags=tags, notes=notes)
