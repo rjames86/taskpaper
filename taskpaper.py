@@ -1,6 +1,5 @@
 import re
 
-
 class Base(object):
     def create_project(self,
                        project_name,
@@ -240,6 +239,12 @@ class Tasks(list):
                 Task(clean_task, self.project, tags=tags)
             )
 
+    @property
+    def todays_tasks(self):
+        return [task for task in self
+                if '@today' in task.tags and
+                '@done' not in task.tags]
+
     def _get_all_tasks(self):
         re_search = re.compile(r'\n\t{%s}-(?:\s|\t)(.*)(?:(?=@)|(?=\n))' %
                                (self.project.indent_level + 1), re.UNICODE)
@@ -268,3 +273,4 @@ class TaskPaper(Base):
     @property
     def projects(self):
         return self._get_projects()
+
