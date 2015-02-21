@@ -1,5 +1,6 @@
 import re
 
+
 class Base(object):
     def create_project(self,
                        project_name,
@@ -136,7 +137,6 @@ class Project(object):
                 return index
         return self._next_project_index
 
-
     def _get_position(self):
         return self._next_newline + 1
 
@@ -175,10 +175,11 @@ class Task(object):
         self.notes = notes if notes else ""
 
     def __str__(self):
-        return "{tabs}- {task}{tags}".format(
+        return "{tabs}- {task}{tags}{notes}".format(
             tabs="\t" * (self.project.indent_level + 1),
             task=self.task,
-            tags=self._get_tag_string()
+            tags=self._get_tag_string(),
+            notes=self._get_notes_string()
             )
 
     def toString(self):
@@ -223,6 +224,14 @@ class Task(object):
 
     def _get_tag_string(self):
         return " " + " ".join(self.tags)
+
+    def _get_notes_string(self):
+        return "".join(
+            "{tabs}{note}\n".format(
+                tabs="\t" * (self.project.indent_level + 2),
+                note=note)
+            for note in self.notes.split('\n')
+            )
 
 
 class Tasks(list):
@@ -273,4 +282,3 @@ class TaskPaper(Base):
     @property
     def projects(self):
         return self._get_projects()
-
