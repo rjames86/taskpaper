@@ -2,31 +2,36 @@
 
 ## Initializing
 
+```python
 	from taskpaper import TaskPaper
 	
 	my_file = '/some/path/tasks.taskpaper'
 	
 	t = TaskPaper(my_file)
+```
 
 ## Projects
 
+```python
 	# Get all projects
 	all_projects = t.projects
 
 	# Create a new top-level project
 	new_project = t.create_project("My New Project")
-	
+
 	# Get a project by name
 	cycling = all_projects.get_by_name('Cycling')
-	
+
 	# Create a subproject
 	training = cycling.add_subproject('Training')
-	
+
 	# Print name of the task
 	print cycling.name # Cycling
+```
 
 ## Tasks
 
+```python
 	# Get all tasks within a project
 	all_tasks = cycling.tasks
 	
@@ -44,6 +49,7 @@
 	
 	# Complete a task
 	new_task.complete()
+```
 
 ## Todo
 
