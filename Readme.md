@@ -32,6 +32,12 @@
 	
 	# Create a new task within a project
 	new_task = cycling.add_task('go ride my bike')
+
+	# Create tasks with tags
+	new_tagged_task = cycling.add_task(
+		'learn to change disc brake pads',
+		tags=['@people(joe)', 'tomorrow'] # the @ will be added if you leave it out
+	)
 	
 	# Create a subtask
 	new_subtask = training.add_task('lunges')
